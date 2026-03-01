@@ -45,7 +45,7 @@ export default defineCommand({
     qwenHome: {
       type: "string",
       alias: "qwen-home",
-      description: "Write Qwen output to this Qwen extensions root (ex: ~/.qwen/extensions/compound-engineering)",
+      description: "Write Qwen output to this Qwen extensions root (ex: ~/.qwen/extensions)",
     },
     also: {
       type: "string",
@@ -89,7 +89,7 @@ export default defineCommand({
       const outputRoot = resolveOutputRoot(args.output)
       const codexHome = resolveTargetHome(args.codexHome, path.join(os.homedir(), ".codex"))
       const piHome = resolveTargetHome(args.piHome, path.join(os.homedir(), ".pi", "agent"))
-      const qwenHome = resolveTargetHome(args.qwenHome, path.join(os.homedir(), ".qwen", "extensions", "compound-engineering"))
+      const qwenHome = resolveTargetHome(args.qwenHome, path.join(os.homedir(), ".qwen", "extensions"))
 
       const options = {
         agentMode: String(args.agentMode) === "primary" ? "primary" : "subagent",
@@ -102,7 +102,7 @@ export default defineCommand({
         throw new Error(`Target ${targetName} did not return a bundle.`)
       }
       const hasExplicitOutput = Boolean(args.output && String(args.output).trim())
-      const primaryOutputRoot = resolveTargetOutputRoot(targetName, outputRoot, codexHome, piHome, hasExplicitOutput)
+      const primaryOutputRoot = resolveTargetOutputRoot(targetName, outputRoot, codexHome, piHome, qwenHome, plugin.manifest.name, hasExplicitOutput)
       await target.write(primaryOutputRoot, bundle)
       console.log(`Installed ${plugin.manifest.name} to ${primaryOutputRoot}`)
 
@@ -123,7 +123,7 @@ export default defineCommand({
           console.warn(`Skipping ${extra}: no output returned.`)
           continue
         }
-        const extraRoot = resolveTargetOutputRoot(extra, path.join(outputRoot, extra), codexHome, piHome, hasExplicitOutput)
+        const extraRoot = resolveTargetOutputRoot(extra, path.join(outputRoot, extra), codexHome, piHome, qwenHome, plugin.manifest.name, hasExplicitOutput)
         await handler.write(extraRoot, extraBundle)
         console.log(`Installed ${plugin.manifest.name} to ${extraRoot}`)
       }
@@ -180,13 +180,14 @@ function resolveTargetOutputRoot(
   outputRoot: string,
   codexHome: string,
   piHome: string,
+  qwenHome: string,
+  pluginName: string,
   hasExplicitOutput: boolean,
 ): string {
   if (targetName === "codex") return codexHome
   if (targetName === "pi") return piHome
   if (targetName === "qwen") {
-    const base = hasExplicitOutput ? outputRoot : path.join(os.homedir(), ".qwen", "extensions")
-    return path.join(base, "compound-engineering")
+    return path.join(qwenHome, pluginName)
   }
   if (targetName === "droid") return path.join(os.homedir(), ".factory")
   if (targetName === "cursor") {

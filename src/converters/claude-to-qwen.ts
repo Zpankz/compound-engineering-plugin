@@ -14,23 +14,6 @@ export type ClaudeToQwenOptions = {
   inferTemperature: boolean
 }
 
-const TOOL_MAP: Record<string, string> = {
-  bash: "bash",
-  read: "read",
-  write: "write",
-  edit: "edit",
-  grep: "grep",
-  glob: "glob",
-  list: "list",
-  webfetch: "webfetch",
-  skill: "skill",
-  patch: "patch",
-  task: "task",
-  question: "question",
-  todowrite: "todowrite",
-  todoread: "todoread",
-}
-
 export function convertClaudeToQwen(plugin: ClaudePlugin, options: ClaudeToQwenOptions): QwenBundle {
   const agentFiles = plugin.agents.map((agent) => convertAgent(agent, options))
   const cmdFiles = convertCommands(plugin.commands)
@@ -119,20 +102,15 @@ function convertMcp(servers: Record<string, ClaudeMcpServer>): Record<string, Qw
         command: server.command,
         args: server.args,
         env: server.env,
-        cwd: "${extensionPath}${/}",
       }
       continue
     }
 
     if (server.url) {
-      // Qwen doesn't support remote MCP servers in the same way
-      // Convert to local with proxy or skip
-      console.warn(`Warning: Remote MCP server '${name}' with URL ${server.url} is not fully supported in Qwen format`)
-      result[name] = {
-        command: "curl",
-        args: [server.url],
-        env: server.headers,
-      }
+      // Qwen only supports stdio (command-based) MCP servers — skip remote servers
+      console.warn(
+        `Warning: Remote MCP server '${name}' (URL: ${server.url}) is not supported in Qwen format. Qwen only supports stdio MCP servers. Skipping.`,
+      )
     }
   }
   return result
@@ -172,10 +150,10 @@ function generateContextFile(plugin: ClaudePlugin): string {
   const sections: string[] = []
 
   // Plugin description
-  sections.push(`# ${plugin.name}`)
+  sections.push(`# ${plugin.manifest.name}`)
   sections.push("")
-  if (plugin.description) {
-    sections.push(plugin.description)
+  if (plugin.manifest.description) {
+    sections.push(plugin.manifest.description)
     sections.push("")
   }
 
@@ -216,10 +194,8 @@ function generateContextFile(plugin: ClaudePlugin): string {
 
 function rewriteQwenPaths(body: string): string {
   return body
-    .replace(/~\/\.claude\//g, "~/.qwen/")
-    .replace(/\.claude\//g, ".qwen/")
-    .replace(/~\/\.config\/opencode\//g, "~/.qwen/")
-    .replace(/\.opencode\//g, ".qwen/")
+    .replace(/(?<=^|\s|["'`])~\/\.claude\//gm, "~/.qwen/")
+    .replace(/(?<=^|\s|["'`])\.claude\//gm, ".qwen/")
 }
 
 const CLAUDE_FAMILY_ALIASES: Record<string, string> = {
@@ -258,5 +234,5 @@ function inferTemperature(agent: ClaudeAgent): number | undefined {
   if (/(brainstorm|creative|ideate|design|concept)/.test(sample)) {
     return 0.6
   }
-  return 0.3
+  return undefined
 }

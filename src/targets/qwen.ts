@@ -53,23 +53,6 @@ export async function writeQwenBundle(outputRoot: string, bundle: QwenBundle): P
 }
 
 function resolveQwenPaths(outputRoot: string) {
-  const base = path.basename(outputRoot)
-  // Global install: ~/.qwen/extensions/<extension-name>
-  // Project install: .qwen/extensions/<extension-name> or <extension-name> at root
-  // If the output root already ends with "extensions" or contains ".qwen/extensions", write directly
-  if (base === "extensions" || outputRoot.includes(".qwen/extensions")) {
-    return {
-      root: outputRoot,
-      configPath: path.join(outputRoot, "qwen-extension.json"),
-      contextPath: path.join(outputRoot, "QWEN.md"),
-      agentsDir: path.join(outputRoot, "agents"),
-      commandsDir: path.join(outputRoot, "commands"),
-      skillsDir: path.join(outputRoot, "skills"),
-    }
-  }
-
-  // Custom output directory - write directly to the output root (not nested)
-  // This is for project-level installs like ./my-extension
   return {
     root: outputRoot,
     configPath: path.join(outputRoot, "qwen-extension.json"),
