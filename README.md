@@ -55,6 +55,9 @@ bunx @every-env/compound-plugin install compound-engineering --to windsurf --sco
 
 # convert to Qwen Code format
 bunx @every-env/compound-plugin install compound-engineering --to qwen
+
+# auto-detect installed tools and install to all
+bunx @every-env/compound-plugin install compound-engineering --to all
 ```
 
 Local dev:
@@ -63,24 +66,34 @@ Local dev:
 bun run src/index.ts install ./plugins/compound-engineering --to opencode
 ```
 
-OpenCode output is written to `~/.config/opencode` by default. Command are written as individual `.md` files to `~/.config/opencode/commands/<name>.md`. Agent, skills, and plugins are written to the corresponding subdirectory alongside. `opencode.json` (MCP servers) is deep-merged into any existing file -- user keys such as `model`, `theme`, and `provider` are preserved, and user values win on conflicts. Command files are backed up before being overwritten.
-Codex output is written to `~/.codex/prompts` and `~/.codex/skills`, with each Claude command converted into both a prompt and a skill (the prompt instructs Codex to load the corresponding skill). Generated Codex skill descriptions are truncated to 1024 characters (Codex limit).
-Droid output is written to `~/.factory/` with commands, droids (agents), and skills. Claude tool names are mapped to Factory equivalents (`Bash` → `Execute`, `Write` → `Create`, etc.) and namespace prefixes are stripped from commands.
-Pi output is written to `~/.pi/agent/` by default with prompts, skills, extensions, and `compound-engineering/mcporter.json` for MCPorter interoperability.
-Gemini output is written to `.gemini/` with skills (from agents), commands (`.toml`), and `settings.json` (MCP servers). Namespaced commands create directory structure (`workflows:plan` → `commands/workflows/plan.toml`). Skills use the identical SKILL.md standard and pass through unchanged.
-Copilot output is written to `.github/` with agents (`.agent.md`), skills (`SKILL.md`), and `copilot-mcp-config.json`. Agents get Copilot frontmatter (`description`, `tools: ["*"]`, `infer: true`), commands are converted to agent skills, and MCP server env vars are prefixed with `COPILOT_MCP_`.
-Kiro output is written to `.kiro/` with custom agents (`.json` configs + prompt `.md` files), skills (from commands), pass-through skills, steering files (from CLAUDE.md), and `mcp.json`. Agents get `includeMcpJson: true` for MCP server access. Only stdio MCP servers are supported (HTTP servers are skipped with a warning).
-OpenClaw output is written to `~/.openclaw/extensions/compound-engineering/` by default with `openclaw-extension.json` (extension config + MCP servers), `OPENCLAW.md` (context), an entry-point TypeScript skill file, agents (`.md`), commands (`.md`), and pass-through skills.
-Windsurf output defaults to global scope (`~/.codeium/windsurf/`). Claude agents become Windsurf skills (`skills/{name}/SKILL.md`), commands become flat workflows (`global_workflows/{name}.md` for global scope, `workflows/{name}.md` for workspace), and pass-through skills copy unchanged. MCP servers write to `mcp_config.json` (machine-readable, merged with existing config). Use `--scope workspace` for project-level output (`.windsurf/`).
-Qwen output is written to `~/.qwen/extensions/compound-engineering/` by default with `qwen-extension.json` (MCP servers), `QWEN.md` (context), agents (`.yaml`), commands (`.md`), and skills. Claude tool names are passed through unchanged. MCP server environment variables with placeholder values are extracted as settings in `qwen-extension.json`. Nested commands use colon separator (`workflows:plan` → `commands/workflows/plan.md`).
+<details>
+<summary>Output format details per target</summary>
+
+| Target | Output path | Notes |
+|--------|------------|-------|
+| `opencode` | `~/.config/opencode/` | Commands as `.md` files; `opencode.json` MCP config deep-merged; backups made before overwriting |
+| `codex` | `~/.codex/prompts` + `~/.codex/skills` | Each command becomes a prompt + skill pair; descriptions truncated to 1024 chars |
+| `droid` | `~/.factory/` | Tool names mapped (`Bash`→`Execute`, `Write`→`Create`); namespace prefixes stripped |
+| `pi` | `~/.pi/agent/` | Prompts, skills, extensions, and `mcporter.json` for MCPorter interoperability |
+| `gemini` | `.gemini/` | Skills from agents; commands as `.toml`; namespaced commands become directories (`workflows:plan` → `commands/workflows/plan.toml`) |
+| `copilot` | `.github/` | Agents as `.agent.md` with Copilot frontmatter; MCP env vars prefixed with `COPILOT_MCP_` |
+| `kiro` | `.kiro/` | Agents as JSON configs + prompt `.md` files; only stdio MCP servers supported |
+| `openclaw` | `~/.openclaw/extensions/<plugin>/` | Entry-point TypeScript skill file; `openclaw-extension.json` for MCP servers |
+| `windsurf` | `~/.codeium/windsurf/` (global) or `.windsurf/` (workspace) | Agents become skills; commands become flat workflows; `mcp_config.json` merged |
+| `qwen` | `~/.qwen/extensions/<plugin>/` | Agents as `.yaml`; env vars with placeholders extracted as settings; colon separator for nested commands |
 
 All provider targets are experimental and may change as the formats evolve.
 
+</details>
+
 ## Sync Personal Config
 
-Sync your personal Claude Code config (`~/.claude/`) to other AI coding tools:
+Sync your personal Claude Code config (`~/.claude/`) to other AI coding tools. Omit `--target` to sync to all detected tools automatically:
 
 ```bash
+# Sync to all detected tools (default)
+bunx @every-env/compound-plugin sync
+
 # Sync skills and MCP servers to OpenCode
 bunx @every-env/compound-plugin sync --target opencode
 
@@ -95,6 +108,12 @@ bunx @every-env/compound-plugin sync --target droid
 
 # Sync to GitHub Copilot (skills + MCP servers)
 bunx @every-env/compound-plugin sync --target copilot
+
+# Sync to Gemini (skills + MCP servers)
+bunx @every-env/compound-plugin sync --target gemini
+
+# Sync to all detected tools
+bunx @every-env/compound-plugin sync --target all
 ```
 
 This syncs:

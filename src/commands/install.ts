@@ -9,6 +9,7 @@ import type { PermissionMode } from "../converters/claude-to-opencode"
 import { ensureCodexAgentsFile } from "../utils/codex-agents"
 import { expandHome, resolveTargetHome } from "../utils/resolve-home"
 import { resolveTargetOutputRoot } from "../utils/resolve-output"
+import { detectInstalledTools } from "../utils/detect-tools"
 
 const permissionModes: PermissionMode[] = ["none", "broad", "from-commands"]
 
@@ -26,7 +27,7 @@ export default defineCommand({
     to: {
       type: "string",
       default: "opencode",
-      description: "Target format (opencode | codex | droid | cursor | pi | copilot | gemini | kiro | windsurf | openclaw | qwen)",
+      description: "Target format (opencode | codex | droid | cursor | pi | copilot | gemini | kiro | windsurf | openclaw | qwen | all)",
     },
     output: {
       type: "string",
@@ -79,20 +80,11 @@ export default defineCommand({
   },
   async run({ args }) {
     const targetName = String(args.to)
-    const target = targets[targetName]
-    if (!target) {
-      throw new Error(`Unknown target: ${targetName}`)
-    }
-    if (!target.implemented) {
-      throw new Error(`Target ${targetName} is registered but not implemented yet.`)
-    }
 
     const permissions = String(args.permissions)
     if (!permissionModes.includes(permissions as PermissionMode)) {
       throw new Error(`Unknown permissions mode: ${permissions}`)
     }
-
-    const resolvedScope = validateScope(targetName, target, args.scope ? String(args.scope) : undefined)
 
     const resolvedPlugin = await resolvePluginPath(String(args.plugin))
 
@@ -101,6 +93,7 @@ export default defineCommand({
       const outputRoot = resolveOutputRoot(args.output)
       const codexHome = resolveTargetHome(args.codexHome, path.join(os.homedir(), ".codex"))
       const piHome = resolveTargetHome(args.piHome, path.join(os.homedir(), ".pi", "agent"))
+      const hasExplicitOutput = Boolean(args.output && String(args.output).trim())
       const openclawHome = resolveTargetHome(args.openclawHome, path.join(os.homedir(), ".openclaw", "extensions"))
       const qwenHome = resolveTargetHome(args.qwenHome, path.join(os.homedir(), ".qwen", "extensions"))
 
@@ -110,11 +103,65 @@ export default defineCommand({
         permissions: permissions as PermissionMode,
       }
 
+      if (targetName === "all") {
+        const detected = await detectInstalledTools()
+        const activeTargets = detected.filter((t) => t.detected)
+
+        if (activeTargets.length === 0) {
+          console.log("No AI coding tools detected. Install at least one tool first.")
+          return
+        }
+
+        console.log(`Detected ${activeTargets.length} tool(s):`)
+        for (const tool of detected) {
+          console.log(`  ${tool.detected ? "✓" : "✗"} ${tool.name} — ${tool.reason}`)
+        }
+
+        for (const tool of activeTargets) {
+          const handler = targets[tool.name]
+          if (!handler || !handler.implemented) {
+            console.warn(`Skipping ${tool.name}: not implemented.`)
+            continue
+          }
+          const bundle = handler.convert(plugin, options)
+          if (!bundle) {
+            console.warn(`Skipping ${tool.name}: no output returned.`)
+            continue
+          }
+          const root = resolveTargetOutputRoot({
+            targetName: tool.name,
+            outputRoot,
+            codexHome,
+            piHome,
+            openclawHome,
+            qwenHome,
+            pluginName: plugin.manifest.name,
+            hasExplicitOutput,
+          })
+          await handler.write(root, bundle)
+          console.log(`Installed ${plugin.manifest.name} to ${tool.name} at ${root}`)
+        }
+
+        if (activeTargets.some((t) => t.name === "codex")) {
+          await ensureCodexAgentsFile(codexHome)
+        }
+        return
+      }
+
+      const target = targets[targetName]
+      if (!target) {
+        throw new Error(`Unknown target: ${targetName}`)
+      }
+      if (!target.implemented) {
+        throw new Error(`Target ${targetName} is registered but not implemented yet.`)
+      }
+
+      const resolvedScope = validateScope(targetName, target, args.scope ? String(args.scope) : undefined)
+
       const bundle = target.convert(plugin, options)
       if (!bundle) {
         throw new Error(`Target ${targetName} did not return a bundle.`)
       }
-      const hasExplicitOutput = Boolean(args.output && String(args.output).trim())
       const primaryOutputRoot = resolveTargetOutputRoot({
         targetName,
         outputRoot,
