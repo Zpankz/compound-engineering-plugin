@@ -7,6 +7,13 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 Release numbering now follows the repository `v*` tag line. Starting at `v2.34.0`, the root CLI package and this changelog stay on that shared version stream. Older entries below retain the previous `0.x` CLI numbering.
 
+## [2.36.5](https://github.com/EveryInc/compound-engineering-plugin/compare/v2.36.4...v2.36.5) (2026-03-15)
+
+
+### Bug Fixes
+
+* **create-agent-skills:** remove literal dynamic context directives that break skill loading ([4b4d1ae](https://github.com/EveryInc/compound-engineering-plugin/commit/4b4d1ae2707895d6d4fd2e60a64d83ca50f094a6)), closes [anthropics/claude-code#27149](https://github.com/anthropics/claude-code/issues/27149) [#13655](https://github.com/EveryInc/compound-engineering-plugin/issues/13655)
+
 ## [2.36.4](https://github.com/EveryInc/compound-engineering-plugin/compare/v2.36.3...v2.36.4) (2026-03-14)
 
 
