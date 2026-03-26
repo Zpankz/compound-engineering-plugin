@@ -18,9 +18,20 @@ command git status
 command git diff HEAD
 command git branch --show-current
 command git log --oneline -10
+command git rev-parse --abbrev-ref origin/HEAD
 ```
 
+The last command returns the remote default branch (e.g., `origin/main`). Strip the `origin/` prefix to get the branch name. If the command fails or returns a bare `HEAD`, try:
+
+```bash
+command gh repo view --json defaultBranchRef --jq '.defaultBranchRef.name'
+```
+
+If both fail, fall back to `main`.
+
 If there are no changes (nothing staged, nothing modified), report that and stop.
+
+If the current branch matches `main`, `master`, or the resolved default branch name, warn the user and ask whether to continue committing here or create a feature branch first. Use the platform's blocking question tool (`AskUserQuestion` in Claude Code, `request_user_input` in Codex, `ask_user` in Gemini). If no question tool is available, present the options and wait for the user's reply before proceeding. If the user chooses to create a branch, derive the name from the change content and switch to it before continuing.
 
 ### Step 2: Determine commit message convention
 
